@@ -56,7 +56,7 @@ class SqliteUtil():
     
     def __init_table(self):
         sql = f"CREATE TABLE IF NOT EXISTS {self.__pickpic_v2_table_name} ( {', '.join(self.__table_head )} )"
-        print(sql)
+        # print(sql)
         self.__cur.execute(sql)
         self.__conn.commit()
 
