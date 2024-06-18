@@ -38,7 +38,7 @@ class SqliteUtil():
         tables = self.__cur.fetchall()
 
         if len(tables) == 0:
-            print('First time running ... ')
+            print('[ Info ] First time running ... ')
             return True
         else:            
             for t in tables:
@@ -48,9 +48,9 @@ class SqliteUtil():
                     self.__cur.execute(sql)
                     self.rows = self.__cur.fetchone()[0]
 
-                    print(f'Find table name: {self.__pickpic_v2_table_name}, rows: {self.rows} ...')
+                    print(f'[ Info ] Find table name: {self.__pickpic_v2_table_name}, rows: {self.rows} ...')
                     return False
-            print(f'Not found target table: {self.__pickpic_v2_table_name} ... \n')
+            print(f'[ Info ] Not found target table: {self.__pickpic_v2_table_name} ... \n')
             return True
 
     

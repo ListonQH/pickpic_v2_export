@@ -3,7 +3,8 @@ import cv2
 import os
 from tqdm import tqdm
 import numpy as np
-from multiprocessing import Pool, cpu_count, Queue
+from multiprocessing import Pool, cpu_count, Manager
+
 from util_sqlite import SqliteUtil
 from util_md5 import get_string_md5, get_np_array_md5
 import time
@@ -30,22 +31,23 @@ def process_error_callback(ex:WorkException):
     
     print(f'[ Error ] Stop {ex.file_name} export, at row: {ex.break_row}.')
 
-def finish_callback(file_name):
+def finish_callback(file_name:str):
 
-    pq_file_checkpoint = dict({
-            'finish':True,
-            'break_row':0 })
+    # pq_file_checkpoint = dict({
+    #         'finish':True,
+    #         'break_row':0 })
     
-    global check_point_file    
-    check_point_file[file_name] = pq_file_checkpoint
+    # global check_point_file    
+    # check_point_file[file_name] = pq_file_checkpoint
 
-    with open(check_point_file_path, 'wb') as pkl_file:
-        pickle.dump(check_point_file, pkl_file)
+    # with open(check_point_file_path, 'wb') as pkl_file:
+    #     pickle.dump(check_point_file, pkl_file)
     
     print(f'[ Info ] Finish {file_name}, save to checkpoint.')
 
 
-def process_work(stop_work_queue:Queue, pq_file_path:str, begin_row:int):
+def process_work(stop_work_queue, pq_file_path:str, begin_row:int):
+# def process_work( pq_file_path:str, begin_row:int):
     
     db_helper = SqliteUtil()
     
@@ -66,8 +68,9 @@ def process_work(stop_work_queue:Queue, pq_file_path:str, begin_row:int):
     
     source_file_name = pq_file_path.split('/')[-1]
     for row in tqdm(range(begin_row, current_file_rows)):
-
-        if stop_work_queue.get(block=False) == quit_work_flag:
+        
+        if not stop_work_queue.empty():
+            stop_work_queue.get(block=False) == quit_work_flag
             stop_work_queue.put(stop_work_queue)
             raise WorkException(source_file_name, row, ex)
         
@@ -121,7 +124,7 @@ def process_work(stop_work_queue:Queue, pq_file_path:str, begin_row:int):
     print(f'[ Info ] Finish export: {pq_file_path}. Rows: {current_file_rows}')
     return parquet_file
     
-def main(stop_work_queue: Queue):
+def main(stop_work_queue):
     file_root_path = './parquet/'
     file_type = '.parquet'    
     img_save_path = './exported_img/'
@@ -148,7 +151,7 @@ def main(stop_work_queue: Queue):
     print(f'[ Info ] Prepare to run, PC cpu count = {cpu_count()}, so that set Pool.processes = {cpu_count()}. ')
 
     # pool = Pool(cpu_count())
-    pool = Pool(2)
+    pool = Pool(3)
     
     for pq_file in os.listdir(file_root_path):
         if not pq_file.endswith(file_type):
@@ -172,8 +175,9 @@ def main(stop_work_queue: Queue):
         # pool.apply_async(func=process_work, args=(file_root_path + pq_file))        
         # pool.apply_async(func=process_work, args=(stop_work_queue, file_root_path + pq_file, begin_row,), 
         #                  callback=finish_callback, error_callback=process_error_callback)
-        args = (stop_work_queue, file_root_path + pq_file, begin_row)        
-        pool.apply_async(func=process_work, args=args) 
+        
+        # pool.apply_async(func=process_work, args=(file_root_path + pq_file, begin_row, ),  callback=finish_callback) 
+        pool.apply_async(func=process_work, args=(stop_work_queue, file_root_path + pq_file, begin_row, )  , callback=finish_callback) 
     
     pool.close()
     pool.join()
@@ -182,7 +186,8 @@ def main(stop_work_queue: Queue):
         
 if __name__ == '__main__':    
     # global check_point_file
-    stop_work_queue = Queue()
+    manager = Manager()
+    stop_work_queue = manager.Queue()
     try:
         main(stop_work_queue)
     except KeyboardInterrupt as e:
