@@ -7,7 +7,7 @@ class SqliteUtil():
         self.__db_file_name = 'data.db'
 
         if not os.path.exists(self.__db_file_name):
-            print(f'{self.__db_file_name} not find, create new!')
+            print(f'[ Warn ] {self.__db_file_name} not find, create new!')
 
         self.__conn = sqlite3.connect(self.__db_file_name)
         self.__cur = self.__conn.cursor()
@@ -70,9 +70,18 @@ class SqliteUtil():
         
         p = ['?'] * len(keys)
         sql = f"INSERT INTO {self.__pickpic_v2_table_name} ( {', '.join(keys)} ) VALUES ( {', '.join( p )} )"
-        # print(sql)        
-        self.__cur.execute(sql, values)
-        self.__conn.commit()
+
+        try:
+            # print(sql)        
+            self.__cur.execute(sql, values)
+            self.__conn.commit()
+        except Exception as e:
+            print(f'[ Error ] Sql execute error: {e}')
+            raise
+    
+    def close(self):
+        self.__cur.close()
+        self.__conn.close()
         
 
 if __name__=="__main__":

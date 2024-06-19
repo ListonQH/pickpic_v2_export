@@ -3,7 +3,7 @@ import cv2
 import os
 from tqdm import tqdm
 import numpy as np
-from multiprocessing import Pool, cpu_count, Manager
+from multiprocessing import Pool, cpu_count, Manager, Process
 
 from util_sqlite import SqliteUtil
 from util_md5 import get_string_md5, get_np_array_md5
@@ -12,9 +12,33 @@ import pickle
 from util_exception import WorkException
 
 
-check_point_file = dict()
 check_point_file_path = './data_export.checkpoint'
 quit_work_flag = 'quit'
+file_root_path = './parquet/'
+file_type = '.parquet'    
+img_save_path = './exported_img/'
+
+def spy_work(queue, spy_process_exit_enent, check_point_file):
+    print('[ Inof ] Spy process start ...')
+    while not spy_process_exit_enent.is_set():
+        if not queue.empty():
+            msg:dict = queue.get(block=False)
+            
+            if msg['type'] == 'Break':
+                msg['finish'] = False
+            elif msg['type'] == 'Finish':
+                msg['finish'] = True
+            
+            source_file_name = msg['file_name']
+
+            check_point_file[source_file_name]=msg
+            print('spy: \n', check_point_file)
+            with open(check_point_file_path, 'wb') as pkl_file:
+                pickle.dump(check_point_file, pkl_file)
+
+        time.sleep(1)
+
+    print('[ Info ] Spy process stop ...')
 
 
 def process_error_callback(ex:WorkException):
@@ -43,11 +67,9 @@ def finish_callback(file_name:str):
     # with open(check_point_file_path, 'wb') as pkl_file:
     #     pickle.dump(check_point_file, pkl_file)
     
-    print(f'[ Info ] Finish {file_name}, save to checkpoint.')
+    print(f'[ Info ] Callback: Finish {file_name}, save to checkpoint.')
 
-
-def process_work(stop_work_queue, pq_file_path:str, begin_row:int):
-# def process_work( pq_file_path:str, begin_row:int):
+def process_work(info_queue, pq_file_path:str, begin_row:int):
     
     db_helper = SqliteUtil()
     
@@ -69,10 +91,10 @@ def process_work(stop_work_queue, pq_file_path:str, begin_row:int):
     source_file_name = pq_file_path.split('/')[-1]
     for row in tqdm(range(begin_row, current_file_rows)):
         
-        if not stop_work_queue.empty():
-            stop_work_queue.get(block=False) == quit_work_flag
-            stop_work_queue.put(stop_work_queue)
-            raise WorkException(source_file_name, row, ex)
+        # if not stop_work_queue.empty():
+        #     stop_work_queue.get(block=False) == quit_work_flag
+        #     stop_work_queue.put(stop_work_queue)
+        #     raise WorkException(source_file_name, row, ex)
         
         prompt = str(caption_col[row].as_py())
         # prompt = prompt.replace('"', '/"')
@@ -105,6 +127,13 @@ def process_work(stop_work_queue, pq_file_path:str, begin_row:int):
         try:
             db_helper.insert(infos)
         except Exception as ex:
+            break_msg = dict({
+                'type':'Break',
+                'file_name':source_file_name,
+                'rows':current_file_rows,
+                'break_row':row
+            })
+            info_queue.put(break_msg)
             raise WorkException(source_file_name, row, ex)
         
         image_array = np.frombuffer(img_1_bytes, np.uint8) 
@@ -119,15 +148,31 @@ def process_work(stop_work_queue, pq_file_path:str, begin_row:int):
         try:
             db_helper.insert(infos)
         except Exception as ex:
+            break_msg = dict({
+                'type':'Break',
+                'file_name:':source_file_name,
+                'rows':current_file_rows,
+                'break_row':row
+            })
+            info_queue.put(break_msg)
             raise WorkException(source_file_name, row, ex)
     
-    print(f'[ Info ] Finish export: {pq_file_path}. Rows: {current_file_rows}')
+    finish_msg = dict({
+        'type':'Finish',
+        'file_name':source_file_name,
+        'rows':current_file_rows
+    })
+    try:
+        info_queue.put(finish_msg)
+    except Exception as ex:
+        print(ex)
+    # print(finish_msg)
+    time.sleep(2)
+    db_helper.close()
+    print(f'[ Info ] Finish export: {pq_file_path}. Rows: {current_file_rows}. Close db_helper.')
     return parquet_file
     
 def main(stop_work_queue):
-    file_root_path = './parquet/'
-    file_type = '.parquet'    
-    img_save_path = './exported_img/'
 
     global check_point_file
     
@@ -150,8 +195,8 @@ def main(stop_work_queue):
             
     print(f'[ Info ] Prepare to run, PC cpu count = {cpu_count()}, so that set Pool.processes = {cpu_count()}. ')
 
-    # pool = Pool(cpu_count())
-    pool = Pool(3)
+    pool = Pool(cpu_count())
+    # pool = Pool(3)
     
     for pq_file in os.listdir(file_root_path):
         if not pq_file.endswith(file_type):
@@ -185,18 +230,78 @@ def main(stop_work_queue):
         pickle.dump(check_point_file, pkl_file)
         
 if __name__ == '__main__':    
-    # global check_point_file
+
+    check_point_file = dict()
+
     manager = Manager()
-    stop_work_queue = manager.Queue()
-    try:
-        main(stop_work_queue)
-    except KeyboardInterrupt as e:
-        stop_work_queue.put(quit_work_flag)
-    except Exception as ex:
-        print(ex)
-        stop_work_queue.put(quit_work_flag)
-    finally:
-        stop_work_queue.put(quit_work_flag)
-        with open(check_point_file_path, 'wb') as pkl_file:
-            pickle.dump(check_point_file, pkl_file)
+    info_queue = manager.Queue()
+
+    # spy
+    spy_process_exit_enent = manager.Event()
+    spy_process = Process(target=spy_work, args=(info_queue, spy_process_exit_enent, check_point_file, ))
+    spy_process.start()
+    
+    if not os.path.exists(img_save_path):
+        os.mkdir(img_save_path)
+        print(f'[ Warn ] Image save path: {img_save_path} not exists, create one. ')
+    
+    if os.path.exists(check_point_file_path):
+        print(f'[ Info ] Found checkpoint file {check_point_file_path}')
+        try:
+            with open(check_point_file_path, 'rb') as file:
+                check_point_file = pickle.load(file)
+        except Exception as ex:
+            print(f'[ Error ] Open checkpoint file error: {ex}. Start new work.')
+        else:
+            print(f'[ Info ] Resume from last work interruption:\n')
+            print(check_point_file)
+            print(f'[ Info ] If you want start a new task, remove/delete {check_point_file_path} and restart the work.')
+    else:
+        print(f'[ Info ] Start new work.')
+    
+    # spy_process_exit_enent.set()
+    # exit(0)
+
+    print(f'[ Info ] Prepare to run, PC cpu count = {cpu_count()}, so that set Pool.processes = {cpu_count() -1 }, and spy_process = 1. ')
+
+    pool = Pool(cpu_count() - 1)
+    # pool = Pool(3)
+    
+    for pq_file in os.listdir(file_root_path):
+        if not pq_file.endswith(file_type):
+            continue
+        
+        begin_row = 0
+
+        if pq_file in check_point_file.keys():
+            pq_file_checkpoint = check_point_file[pq_file]
+            if pq_file_checkpoint['finish'] == True:
+                continue
+            else:
+                begin_row = pq_file_checkpoint['break_row']
+        else:
+            pq_file_checkpoint =dict({
+                'finish':False,
+                'break_row':0
+            })
+            check_point_file[pq_file] = pq_file_checkpoint
+        
+        # pool.apply_async(func=process_work, args=(file_root_path + pq_file))        
+        # pool.apply_async(func=process_work, args=(stop_work_queue, file_root_path + pq_file, begin_row,), 
+        #                  callback=finish_callback, error_callback=process_error_callback)
+        
+        # pool.apply_async(func=process_work, args=(file_root_path + pq_file, begin_row, ),  callback=finish_callback) 
+        pool.apply_async(func=process_work, args=(info_queue, file_root_path + pq_file, begin_row, ), callback=finish_callback) 
+    
+    pool.close()
+    pool.join()
+
+    # print(check_point_file)
+
+    # with open(check_point_file_path, 'wb') as pkl_file:
+    #     pickle.dump(check_point_file, pkl_file)
+    
+    spy_process_exit_enent.set()
+    spy_process.join()
+    print('Done!')
         
