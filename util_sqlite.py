@@ -48,7 +48,7 @@ class SqliteUtil():
                     self.__cur.execute(sql)
                     self.rows = self.__cur.fetchone()[0]
 
-                    print(f'[ Info ] Find table name: {self.__pickpic_v2_table_name}, rows: {self.rows} ...')
+                    # print(f'[ Info ] Find table name: {self.__pickpic_v2_table_name}, rows: {self.rows} ...')
                     return False
             print(f'[ Info ] Not found target table: {self.__pickpic_v2_table_name} ... \n')
             return True
