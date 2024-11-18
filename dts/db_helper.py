@@ -11,7 +11,8 @@ import json
 "pic_score": 19.90730094909668, "clip_score": 0.7353515625, "art_score": 6.044918537139893}
 }
 '''
-all_imgs_infos_json = 'assets/all_imgs_info_2024-11-11-09-55-01.json'
+# all_imgs_infos_json = r'D:\codes\pickpic_v2_export\dts\assets\all_imgs_info_2024-11-11-09-55-01.json'
+all_imgs_infos_json = r'C:\code\pickpic_v2_export\dts\assets\all_imgs_info_2024-11-11-09-55-01.json'
 
 def select_imgs_by_score() -> list:
     ret = []

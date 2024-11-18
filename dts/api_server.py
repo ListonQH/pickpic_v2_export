@@ -1,4 +1,4 @@
-from flask import Flask, request
+from flask import Flask, request, render_template
 import json
 import threading
 import db_helper
@@ -15,7 +15,7 @@ mmb = "1@wdvfr567yh=bgt8ijnmku09-."
 # 携带访问，简单身份认证
 auth_token = 'asgdae4wgawhgaertgwhdnhjexssarx'
 # 一次返回的长度
-batch_size = 200
+batch_size = 20
 # 访问计数器
 req_counter = 0
 # 错误退出list
@@ -118,25 +118,44 @@ def g_imgs():
 
 @app.route('/dts/say_yes', methods=['GET'])
 def say_yes():
-    detail_dict = {}
+    detail_dict = []
     dk = ['sid', 'work_space', 'cuda_name', 'register_time', 'req_counter']
-    for k, v in client_auth_dict.items():
+    for i, k in enumerate(client_auth_dict.keys()):
+    # for k, v in .items():
         temp_d = {}
-        for kk in v.keys():
+        for kk in client_auth_dict[k].keys():
             if kk in dk:
-                temp_d[kk] = v[kk]
-        detail_dict[k] = temp_d
+                temp_d[kk] = client_auth_dict[k][kk]
+        temp_d['no'] = i
+        temp_d['last_time'] = client_auth_dict[k]['req_time'][-1]
+        temp_d['online'] = True
+        detail_dict.append(temp_d)
+        # detail_dict[k] = temp_d
+    
     
     # print(detail_dict)
 
+    # info_dict = {
+    #     'totall_tasks':len(all_imgs),
+    #     'current:all': f'{begin_index}:{len(all_imgs)}',
+    #     'register_number':len(client_auth_dict.keys()),
+    #     'work_name':[i for i in client_auth_dict.keys()],
+    #     'error_bye':error_bye_dict,
+    #     'detail':detail_dict
+    # }
+
     info_dict = {
-        'current:all': f'{begin_index}:{len(all_imgs)}',
+        'session_id':session_id,
+        'totall_tasks':len(all_imgs),
+        'current': begin_index,
+        'step':batch_size,
         'register_number':len(client_auth_dict.keys()),
         'work_name':[i for i in client_auth_dict.keys()],
         'error_bye':error_bye_dict,
         'detail':detail_dict
     }
-    return json.dumps(info_dict)
+    return render_template("dts.html", info_dict=info_dict)
+    # return json.dumps(info_dict)
 
 @app.route('/dts/say_bye', methods=['GET'])
 def error_quit():
@@ -158,5 +177,5 @@ if __name__ == '__main__':
     session_id = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     init()
 
-    app.run(debug=True, port=19972)
+    app.run(debug=False, port=19972)
 

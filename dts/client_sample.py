@@ -7,9 +7,9 @@ auth_token = 'asgdae4wgawhgaertgwhdnhjexssarx'
 # 任何请求的 最大 尝试 次数
 max_try = 10
 
-hi_url = 'http://127.0.0.1:5000/dts/hi'
-last_url = 'http://127.0.0.1:5000/dts/done'
-gimgs_url = 'http://127.0.0.1:5000/dts/gimgs'
+hi_url = 'http://127.0.0.1:19972/dts/hi'
+last_url = 'http://127.0.0.1:19972/dts/done'
+gimgs_url = 'http://127.0.0.1:19972/dts/gimgs'
 
 # hi_url = 'https://www.grjywlqh.cn/dts/hi'
 # last_url = 'https://www.grjywlqh.cn/dts/done'
@@ -21,7 +21,7 @@ sid = ""
 try_num = 0
 while True:
     try_num = try_num + 1
-    res = requests.get(hi_url, params={'t':auth_token, 'cid':cid, 'ws':'win10', 'cudan':-1})
+    res = requests.get(hi_url, params={'t':auth_token, 'cid':cid, 'ws':'ubuntu', 'cudan':-11})
     if res.ok:
         res_text_dict = json.loads(res.text)
         access_token = res_text_dict['at']
@@ -57,5 +57,5 @@ while True:
         break
     for i in work_list:
         print(f'Qwen2-7B: [{i}]')
-        time.sleep(0.5)
+        time.sleep(0.2)
 

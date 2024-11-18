@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Distribute Task Scheduling</title>
+        <!-- https://www.cnblogs.com/liugp/p/17220546.html -->
+    </head>
+    <body>
+        <h2>Task Overview</h2>
+        SessionID: {{ info_dict.session_id }} 
+        <br>      
+        Step: {{ info_dict.step }} 
+        <br>       
+        Totall Task: {{ info_dict.totall_tasks }}
+        <br>        
+        Current: {{ info_dict.current }}, finish process: {{ info_dict.current / info_dict.totall_tasks * 100.00}}%        
+
+        <h2>Device Detail:</h2>
+        <table border="1" width="auto" height="auto" bordercolor="green" align="left" bgcolor="#cccccc">
+            <tr align="center" >
+                <th scope="col">No</th>
+                <th scope="col">Work Space</th>
+                <th scope="col">GPU Name</th>
+                <th scope="col">Register Time</th>
+                <th scope="col">Last Time</th>
+                <th scope="col">Request Count</th>
+                <th scope="col">Online</th>
+            </tr>
+            {% for device in info_dict.detail %}
+            <tr align="center">                
+                <th scope="row">{{ device.no }}</td>
+                <td>{{ device.work_space }}</td>
+                <td>{{ device.cuda_name }}</td>
+                <td>{{ device.register_time }}</td>
+                <td>{{ device.last_time }}</td>
+                <td>{{ device.req_counter }}</td>
+                <td>{{ device.online }}</td>
+            </tr>
+            {% endfor %}
+
+        </table>
+        <br>
+        <br>
+        {% for device in info_dict.detail %}
+        <br>    
+        {% endfor %}          
+        
+        <h2>Error from Device</h2> 
+        <table border="1" width="auto" height="auto" bordercolor="green" align="left" bgcolor="#cccccc">
+            <tr align="center" >
+                <th scope="col">No</th>
+                <th scope="col">Work Space</th>
+                <th scope="col">GPU Name</th>
+                <th scope="col">Register Time</th>
+                <th scope="col">Last Time</th>
+                <th scope="col">Request Count</th>
+                <th scope="col">Online</th>
+            </tr>
+
+            <tr align="center">
+                <th scope="row">0</td>
+                <td>40</td>
+                <td>400</td>
+                <td>4400</td>
+                <td>44000</td>
+                <td>440000</td>
+                <td>4400000</td>
+            </tr>
+
+        </table>
+
+    </body>
+    <footer>
+    </footer>
+</html>
