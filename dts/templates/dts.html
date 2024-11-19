@@ -10,11 +10,13 @@
         <h2>Task Overview</h2>
         SessionID: {{ info_dict.session_id }} 
         <br>      
-        Step: {{ info_dict.step }} 
+        Default Step: {{ info_dict.step }} 
+        <br>       
+        Totall Requests: {{ info_dict.totall_requestions }}
         <br>       
         Totall Task: {{ info_dict.totall_tasks }}
         <br>        
-        Current: {{ info_dict.current }}, finish process: {{ info_dict.current / info_dict.totall_tasks * 100.00}}%        
+        Current Index: {{ info_dict.current }}, finish process: {{ info_dict.current / info_dict.totall_tasks * 100.00}}%        
 
         <h2>Device Detail:</h2>
         <table border="1" width="auto" height="auto" bordercolor="green" align="left" bgcolor="#cccccc">
@@ -25,6 +27,7 @@
                 <th scope="col">Register Time</th>
                 <th scope="col">Last Time</th>
                 <th scope="col">Request Count</th>
+                <th scope="col">Request Step</th>
                 <th scope="col">Online</th>
             </tr>
             {% for device in info_dict.detail %}
@@ -35,6 +38,7 @@
                 <td>{{ device.register_time }}</td>
                 <td>{{ device.last_time }}</td>
                 <td>{{ device.req_counter }}</td>
+                <td>{{ device.req_step }}</td>
                 <td>{{ device.online }}</td>
             </tr>
             {% endfor %}

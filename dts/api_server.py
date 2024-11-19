@@ -52,7 +52,7 @@ def register():
     
     rand_client_psd = "".join(random.choices(mmb, k=10))
     client_auth_dict[cid]={'sid':session_id, 'work_space':work_space,'cuda_name': cuda_name,
-                           'register_time':datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'req_counter':0, 'cpsd':rand_client_psd, 'req_time':[]}
+                           'register_time':datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"), 'req_counter':0, 'req_step':batch_size,'cpsd':rand_client_psd, 'req_time':[]}
     return {'at':rand_client_psd, 'sid':session_id}
 
 '''
@@ -104,14 +104,19 @@ def g_imgs():
                 
         req_counter = req_counter + 1
         client_auth_dict[cid]['req_counter'] = client_auth_dict[cid]['req_counter'] + 1
+        
         temp_list = client_auth_dict[cid]['req_time']
         temp_list.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         client_auth_dict[cid]['req_time'] = temp_list[-5:]
-        temp_step = batch_size
+        temp_step = batch_size        
+       
         if request_size != None:
-            if isinstance(request_size, int):
-                temp_step = request_size
-        
+            try:
+                temp_step = int(request_size)
+                client_auth_dict[cid]['req_step'] = temp_step
+            except Exception as ex:
+                print('[ info ]: Get unexpect step: ', request_size, f'. Use default batch_size: {batch_size} instead.')
+                
         end_index = min(len(all_imgs), begin_index + temp_step)
 
         res = json.dumps({"items":all_imgs[begin_index:end_index]})
@@ -135,6 +140,7 @@ def say_yes():
                 temp_d[kk] = client_auth_dict[k][kk]
         temp_d['no'] = i
         temp_d['last_time'] = client_auth_dict[k]['req_time'][-1]
+        temp_d['req_step'] = client_auth_dict[k]['req_step']
         temp_d['online'] = True
         detail_dict.append(temp_d)
         # detail_dict[k] = temp_d
@@ -154,6 +160,7 @@ def say_yes():
     info_dict = {
         'session_id':session_id,
         'totall_tasks':len(all_imgs),
+        'totall_requestions':req_counter,
         'current': begin_index,
         'step':batch_size,
         'register_number':len(client_auth_dict.keys()),

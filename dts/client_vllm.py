@@ -28,13 +28,13 @@ sampling_params = SamplingParams(temperature=0.2,
                                      max_tokens=64,
                                      stop_token_ids=stop_token_ids)
 
-def vllm_inference():
+def vllm_inference(work_sapce, cuda_name):
     global login_result
-    login_result = dts_helper.login()
+    login_result = dts_helper.login(work_sapce, cuda_name)
     if login_result == None:
         return
     while True:
-        work_list = dts_helper.get_imgs_path_list()
+        work_list = dts_helper.get_imgs_path_list(login_result)
         if len(work_list) == 0:
             print('[ info ] vllm_inference: get empty work list!')
             break
@@ -56,3 +56,6 @@ def vllm_inference():
 
 if __name__=='__main__':
     print('Are u OK?')
+    work_space = 'win10'
+    cuda_name = 'cuda:0'
+    vllm_inference(work_sapce=work_space, cuda_name=cuda_name)

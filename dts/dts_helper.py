@@ -57,7 +57,7 @@ def is_done(login_result:dict) -> bool:
             return True
 
 def get_imgs_path_list(login_result:dict, request_size:int = 10) -> list:    
-    if is_done():
+    if is_done(login_result):
         return []
     try_num = 0
     get_imgs_para = {'t':login_result['access_token'], 'cid':login_result['cid'], 'sid':login_result['sid'], 'request_size':request_size}
