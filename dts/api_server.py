@@ -84,6 +84,7 @@ def g_imgs():
     t = request.args.get("t")
     cid = request.args.get("cid")
     sid = request.args.get("sid")
+    request_size = request.args.get("request_size")
 
     if (cid not in client_auth_dict.keys()):
         return ""
@@ -106,13 +107,19 @@ def g_imgs():
         temp_list = client_auth_dict[cid]['req_time']
         temp_list.append(datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
         client_auth_dict[cid]['req_time'] = temp_list[-5:]
+        temp_step = batch_size
+        if request_size != None:
+            if isinstance(request_size, int):
+                temp_step = request_size
+        
+        end_index = min(len(all_imgs), begin_index + temp_step)
 
-        end_index = min(len(all_imgs), begin_index + batch_size)
         res = json.dumps({"items":all_imgs[begin_index:end_index]})
-        if begin_index + batch_size >= len(all_imgs):
+        
+        if begin_index + temp_step >= len(all_imgs):
             begin_index = len(all_imgs)
         else:
-            begin_index = begin_index + batch_size
+            begin_index = begin_index + temp_step
     print(client_auth_dict)
     return res
 
